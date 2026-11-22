@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -22,7 +23,7 @@ export default function NotesPage() {
         return;
       }
 
-      const data = await res.json();
+      const data: Note[] = await res.json();
       setNotes(data);
     } catch (error) {
       console.error("Error loading notes:", error);
@@ -35,26 +36,31 @@ export default function NotesPage() {
       return;
     }
 
-    const res = await fetch("/api/notes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        content,
-      }),
-    });
+    try {
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          content,
+        }),
+      });
 
-    if (!res.ok) {
-      alert("Failed to create note.");
-      return;
+      if (!res.ok) {
+        alert("Failed to create note.");
+        return;
+      }
+
+      setTitle("");
+      setContent("");
+
+      await loadNotes();
+    } catch (error) {
+      console.error("Error creating note:", error);
+      alert("Something went wrong while creating the note.");
     }
-
-    setTitle("");
-    setContent("");
-
-    loadNotes();
   }
 
   async function deleteNote(id: string) {
@@ -62,63 +68,106 @@ export default function NotesPage() {
 
     if (!confirmed) return;
 
-    const res = await fetch(`/api/notes/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+        method: "DELETE",
+      });
 
-    if (!res.ok) {
-      alert("Failed to delete note.");
-      return;
+      if (!res.ok) {
+        alert("Failed to delete note.");
+        return;
+      }
+
+      await loadNotes();
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      alert("Something went wrong while deleting the note.");
     }
-
-    loadNotes();
   }
 
   async function editNote(note: Note) {
     const newTitle = prompt("Edit title", note.title);
+
     if (newTitle === null) return;
 
     const newContent = prompt("Edit content", note.content);
+
     if (newContent === null) return;
 
-    const res = await fetch(`/api/notes/${note._id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title: newTitle,
-        content: newContent,
-      }),
-    });
-
-    if (!res.ok) {
-      alert("Failed to update note.");
+    if (!newTitle.trim() || !newContent.trim()) {
+      alert("Title and content cannot be empty.");
       return;
     }
 
-    loadNotes();
+    try {
+      const res = await fetch(`/api/notes/${note._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: newTitle,
+          content: newContent,
+        }),
+      });
+
+      if (!res.ok) {
+        alert("Failed to update note.");
+        return;
+      }
+
+      await loadNotes();
+    } catch (error) {
+      console.error("Error updating note:", error);
+      alert("Something went wrong while updating the note.");
+    }
   }
 
   useEffect(() => {
-    loadNotes();
+    let ignore = false;
+
+    async function fetchNotes() {
+      try {
+        const res = await fetch("/api/notes");
+
+        if (!res.ok) {
+          throw new Error("Failed to load notes");
+        }
+
+        const data: Note[] = await res.json();
+
+        if (!ignore) {
+          setNotes(data);
+        }
+      } catch (error) {
+        if (!ignore) {
+          console.error("Error loading notes:", error);
+        }
+      }
+    }
+
+    void fetchNotes();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
-    <main className="p-6 max-w-3xl mx-auto">
+    <main className="mx-auto max-w-3xl p-6">
       <h1 className="text-2xl font-bold">My Notes</h1>
 
       {/* Create Note */}
-      <div className="mt-6 border rounded p-4 shadow">
+      <div className="mt-6 rounded border p-4 shadow">
         <input
-          className="border p-2 w-full rounded"
+          className="w-full rounded border p-2"
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
 
         <textarea
-          className="border p-2 w-full rounded mt-3"
+          className="mt-3 w-full rounded border p-2"
           placeholder="Content"
           rows={4}
           value={content}
@@ -126,7 +175,7 @@ export default function NotesPage() {
         />
 
         <button
-          className="bg-blue-600 text-white px-4 py-2 rounded mt-3 hover:bg-blue-700"
+          className="mt-3 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
           onClick={createNote}
         >
           Add Note
@@ -141,23 +190,23 @@ export default function NotesPage() {
           notes.map((note) => (
             <div
               key={note._id}
-              className="border rounded p-4 mb-4 shadow"
+              className="mb-4 rounded border p-4 shadow"
             >
               <h2 className="text-lg font-bold">{note.title}</h2>
 
               <p className="mt-2">{note.content}</p>
 
-              <div className="flex gap-3 mt-4">
+              <div className="mt-4 flex gap-3">
                 <button
                   onClick={() => editNote(note)}
-                  className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                  className="rounded bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600"
                 >
                   Edit
                 </button>
 
                 <button
                   onClick={() => deleteNote(note._id)}
-                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                  className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
                 >
                   Delete
                 </button>

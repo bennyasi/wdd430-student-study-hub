@@ -7,55 +7,84 @@ import Link from "next/link";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function handleLogin() {
-    await signIn("credentials", {
-      email,
-      password,
-      callbackUrl: "/dashboard",
-    });
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (!result || result.error) {
+        setError("Invalid email or password. Please try again.");
+        return;
+      }
+
+      window.location.href = "/dashboard";
+    } catch {
+      setError("Unable to log in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="p-6 max-w-md mx-auto">
-      {/* 👇 BACK BUTTON */}
-      <div className="mb-4">
-        <Link href="/">
-          <button className="text-blue-500 underline">
-            ← Back to Home
-          </button>
-        </Link>
-      </div>
+    <main className="mx-auto max-w-md p-6">
+      <Link href="/" className="text-blue-500 underline">
+        Back to Home
+      </Link>
 
-      <h1 className="text-2xl font-bold">Login</h1>
+      <h1 className="mt-4 text-2xl font-bold">Login</h1>
 
-      <input
-        className="border p-2 w-full mt-2"
-        placeholder="Email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
+      <form onSubmit={handleLogin}>
+        <input
+          className="mt-2 w-full border p-2"
+          placeholder="Email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+        />
 
-      <input
-        className="border p-2 w-full mt-2"
-        placeholder="Password"
-        type="password"
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          className="mt-2 w-full border p-2"
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
 
-      <button
-        className="bg-blue-500 text-white p-2 mt-4 w-full"
-        onClick={handleLogin}
-      >
-        Login
-      </button>
+        {error && (
+          <p role="alert" className="mt-3 text-red-600">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-4 w-full bg-blue-500 p-2 text-white disabled:opacity-50"
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
 
       <div className="mt-4 text-center">
-        <p className="text-gray-600">Don't have an account?</p>
+        <p className="text-gray-600">Don&apos;t have an account?</p>
 
-        <Link href="/register">
-          <button className="mt-2 bg-green-500 text-white px-4 py-2 rounded">
-            Register
-          </button>
+        <Link
+          href="/register"
+          className="mt-2 inline-block rounded bg-green-500 px-4 py-2 text-white"
+        >
+          Register
         </Link>
       </div>
     </main>
