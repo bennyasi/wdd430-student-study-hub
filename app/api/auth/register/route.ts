@@ -4,7 +4,15 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await req.json();
+
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const email =
+      typeof body.email === "string"
+        ? body.email.trim().toLowerCase()
+        : "";
+    const password =
+      typeof body.password === "string" ? body.password : "";
 
     if (!name || !email || !password) {
       return Response.json(
@@ -14,7 +22,8 @@ export async function POST(req: Request) {
     }
 
     const existingUsers = await sql`
-      SELECT id FROM users
+      SELECT id
+      FROM users
       WHERE email = ${email}
       LIMIT 1
     `;
@@ -22,7 +31,7 @@ export async function POST(req: Request) {
     if (existingUsers.length > 0) {
       return Response.json(
         { error: "User already exists" },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
@@ -35,7 +44,10 @@ export async function POST(req: Request) {
     `;
 
     return Response.json(
-      { message: "User created", user: users[0] },
+      {
+        message: "User created successfully",
+        user: users[0],
+      },
       { status: 201 }
     );
   } catch (error) {
